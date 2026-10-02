@@ -1,0 +1,43 @@
+﻿CO PANEL - ĐIỀU KHOẢN SỬ DỤNG & TRÁCH NHIỆM
+Phiên bản 1.0.0 - Cập nhật: 01/10/2026
+
+Vui lòng đọc kỹ các điều khoản dưới đây trước khi cài đặt. Bằng việc chọn
+"Tôi đồng ý" và tiếp tục, bạn đồng ý với toàn bộ nội dung này.
+
+1. GIỚI THIỆU
+CoPanel là ứng dụng client (phần mềm máy khách) dùng để kết nối và quản lý máy
+chủ game thông qua panel Pterodactyl hoặc Calagopus do chính bạn cung cấp.
+Phần mềm hoạt động bằng cách gọi trực tiếp API của panel bằng địa chỉ và
+Client API Key mà bạn nhập vào.
+
+2. QUYỀN CỦA BẠN
+- Bạn được cài đặt và sử dụng CoPanel miễn phí cho mục đích hợp pháp.
+- Bạn toàn quyền kiểm soát dữ liệu của mình: gỡ cài đặt bất kỳ lúc nào.
+
+3. TRÁCH NHIỆM CỦA BẠN
+- Bảo mật Client API Key và tài khoản panel của bạn. Không chia sẻ key cho
+  người khác. Key lưu trên máy được mã hoá bằng khoá của hệ điều hành.
+- Chỉ sử dụng phần mềm với các panel và máy chủ mà bạn có quyền quản lý.
+- Tuân thủ điều khoản sử dụng của nhà cung cấp panel (Pterodactyl, Calagopus)
+  và pháp luật hiện hành. Bạn chịu trách nhiệm về mọi thao tác thực hiện qua
+  ứng dụng (khởi động/dừng, xoá dữ liệu, sao lưu, lịch trình...).
+
+4. DỮ LIỆU
+- CoPanel KHÔNG lưu trữ dữ liệu máy chủ, không có máy chủ trung gian và không
+  gửi dữ liệu của bạn cho bên thứ ba. Mọi dữ liệu (console, trạng thái, tệp
+  tin, sao lưu...) được đọc trực tiếp từ panel của bạn.
+- Cấu hình và API key chỉ lưu trên máy của bạn.
+
+5. MIỄN TRỪ BẢO HÀNH
+Phần mềm được cung cấp "nguyên trạng" (as-is), không kèm bảo hành dưới bất kỳ
+hình thức nào. Tác giả không cam kết phần mềm hoạt động không lỗi, và KHÔNG
+chịu trách nhiệm cho bất kỳ thiệt hại nào phát sinh từ việc sử dụng, bao gồm
+nhưng không giới hạn: mất hoặc hỏng dữ liệu máy chủ, gián đoạn hoạt động,
+mất doanh thu, hoặc thiệt hại do cấu hình sai.
+
+6. THƯƠNG HIỆU
+CoPanel không phải sản phẩm chính thức của Pterodactyl hay Calagopus. Các
+thương hiệu thuộc về chủ sở hữu tương ứng.
+
+7. THAY ĐỔI
+Các điều khoản này có thể được cập nhật trong các phiên bản sau.

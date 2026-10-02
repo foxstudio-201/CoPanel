@@ -1,0 +1,103 @@
+{
+  "name": "copanel",
+  "private": true,
+  "version": "1.0.0",
+  "description": "CoPanel - Remote game server panel client (Pterodactyl / Calagopus)",
+  "author": {
+    "name": "CoPanel",
+    "email": "contact@copanel.local"
+  },
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --no-open",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5174 && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "npm run build && electron-builder",
+    "start": "electron ."
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-search": "^0.16.0",
+    "@xterm/addon-unicode11": "^0.9.0",
+    "@xterm/xterm": "^6.0.0"
+  },
+  "devDependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^44.4.1",
+    "electron-builder": "^26.8.1",
+    "globals": "^17.5.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "tailwindcss": "^4.3.0",
+    "vite": "^8.0.10",
+    "wait-on": "^9.0.5"
+  },
+  "build": {
+    "appId": "com.copanel.app",
+    "productName": "CoPanel",
+    "copyright": "Copyright © 2026 CoPanel",
+    "asar": true,
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "build-resources"
+    },
+    "compression": "maximum",
+    "files": [
+      "dist/**/*",
+      "!dist/**/*.exe",
+      "electron/**/*",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "public/icon.ico",
+        "to": "icon.ico"
+      },
+      {
+        "from": "public/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "forceCodeSigning": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CoPanel",
+      "include": "installer.nsh",
+      "license": "license_vi.txt"
+    },
+    "publish": null
+  }
+}
