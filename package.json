@@ -1,7 +1,7 @@
 {
   "name": "copanel",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CoPanel - Remote game server panel client (Pterodactyl / Calagopus)",
   "author": {
     "name": "CoPanel",
