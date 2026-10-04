@@ -35,4 +35,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeWindow: () => ipcRenderer.invoke('win:close'),
   quitApp: () => ipcRenderer.invoke('win:quit'),
   handleCloseRequest: async () => ({ action: 'quit' }),
+
+  updateGet: () => ipcRenderer.invoke('update:get'),
+  updateCheck: () => ipcRenderer.invoke('update:check'),
+  updateDownload: () => ipcRenderer.invoke('update:download'),
+  updateInstall: () => ipcRenderer.invoke('update:install'),
+  updateSetAuto: (value) => ipcRenderer.invoke('update:set-auto', value),
+  onUpdateEvent: on('copanel:update'),
 })

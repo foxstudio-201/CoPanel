@@ -168,6 +168,8 @@ export function backupRows(json) {
     id: b.uuid,
     bytes: Number(b.bytes) || 0,
     created_at: b.created || null,
+    completed_at: b.completed || null,
+    deletionStatus: b.deletion_status || null,
     is_successful: !!b.is_successful,
     is_locked: !!b.is_locked,
     ignored_files: b.ignored_files || [],

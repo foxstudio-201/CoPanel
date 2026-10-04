@@ -1,8 +1,30 @@
 
 import { getSession, setSession, resetSession, emitTps } from './store.js'
 import * as api from './client.js'
+import { listAccounts, saveAccount, deleteAccount, getAccountApiKey } from './accounts.js'
 
 const isElectron = typeof window !== 'undefined' && !!window.electronAPI
+
+
+export function buildAccountId(url, account) {
+  const who = String(account?.username || account?.email || 'account').toLowerCase()
+  const seed = `${url}|${who}`
+  let h = 5381
+  for (let i = 0; i < seed.length; i++) h = ((h << 5) + h + seed.charCodeAt(i)) >>> 0
+  return `acc_${h.toString(36)}`
+}
+
+
+function normalizeAccount(account) {
+  return {
+    id: account?.id ?? null,
+    uuid: account?.uuid || '',
+    username: account?.username || account?.email?.split('@')[0] || '',
+    email: account?.email || '',
+    root_admin: !!account?.root_admin,
+    image: account?.image || '',
+  }
+}
 
 
 export function normalizeUrl(raw) {
@@ -29,6 +51,14 @@ async function persist() {
     },
   })
   await window.electronAPI.setSecret('panelApiKey', s.apiKey)
+
+  await saveAccount({
+    id: buildAccountId(s.url, s.account),
+    panelType: s.panelType,
+    url: s.url,
+    apiKey: s.apiKey,
+    account: s.account,
+  })
 }
 
 async function forgetSecrets() {
@@ -81,20 +111,14 @@ export async function connectWithApiKey({ panelType, url, apiKey }) {
     }
   }
 
-  setSession({ status: 'connecting', panelType: type, url: origin, apiKey: key, error: '' })
+  setSession({ status: 'connecting', panelType: type, url: origin, apiKey: key, accountId: '', demo: false, error: '' })
 
   try {
-    const account = await api.getAccount()
+    const account = normalizeAccount(await api.getAccount())
     setSession({
       status: 'connected',
-      account: {
-        id: account?.id ?? null,
-        uuid: account?.uuid || '',
-        username: account?.username || account?.email?.split('@')[0] || '',
-        email: account?.email || '',
-        root_admin: !!account?.root_admin,
-        image: account?.image || '',
-      },
+      accountId: buildAccountId(origin, account),
+      account,
       error: '',
     })
     await persist()
@@ -142,17 +166,11 @@ export async function restoreConnection(expectedType) {
     error: '',
   })
   try {
-    const account = await api.getAccount()
+    const account = normalizeAccount(await api.getAccount())
     setSession({
       status: 'connected',
-      account: {
-        id: account?.id ?? null,
-        uuid: account?.uuid || '',
-        username: account?.username || account?.email?.split('@')[0] || '',
-        email: account?.email || '',
-        root_admin: !!account?.root_admin,
-        image: account?.image || '',
-      },
+      accountId: buildAccountId(panel.url, account),
+      account,
     })
     return { ok: true }
   } catch (err) {
@@ -175,6 +193,22 @@ export async function disconnect({ forget = true } = {}) {
     await window.electronAPI.saveSettings({ ...settings, panel: undefined })
   }
   resetSession()
+}
+
+
+export async function switchAccount(accountId) {
+  if (!isElectron) return { ok: false, error: 'Desktop build required.' }
+
+  const accounts = await listAccounts()
+  const entry = accounts.find((a) => a.id === accountId)
+  if (!entry) return { ok: false, error: 'Account not found.' }
+
+  const apiKey = await getAccountApiKey(accountId)
+  if (!apiKey) return { ok: false, error: 'Missing API key. Please re-enter credentials.' }
+
+  for (const id of [...consoleSubscribers.keys()]) await closeConsole(id)
+
+  return connectWithApiKey({ panelType: entry.panelType, url: entry.url, apiKey })
 }
 
 const consoleSubscribers = new Map() 
@@ -301,3 +335,6 @@ export function consoleStatus(identifier) {
   if (!isElectron) return Promise.resolve({ ok: false, connected: false })
   return window.electronAPI.wsStatus({ id: identifier })
 }
+
+
+export { listAccounts, deleteAccount, getAccountApiKey } from './accounts.js'

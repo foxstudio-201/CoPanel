@@ -6,6 +6,8 @@ import SplashScreen from './components/SplashScreen'
 import ConnectPage from './components/ConnectPage'
 import TooltipProvider from './components/ui/TooltipProvider'
 import ToastHost from './components/ui/ToastHost'
+import ConfirmHost from './components/ui/ConfirmHost'
+import UpdateBridge from './components/ui/UpdateBridge'
 import HomePage from './components/HomePage'
 import SettingsPage from './components/SettingsPage'
 import ServerPanel from './components/server/ServerPanel'
@@ -163,6 +165,8 @@ function AppContent() {
     if (session.status !== 'connected') {
       setServers([])
       setSelectedServer(null)
+      setDisplayPage('servers')
+      setActivePage('servers')
       return
     }
     loadServers()
@@ -215,6 +219,17 @@ function AppContent() {
     setDisplayPage('servers')
     setActivePage('servers')
     setPhase('idle')
+  }, [])
+
+  const handleAddAccount = useCallback(async () => {
+    setPhase('fading-out')
+    await disconnect({ forget: false })
+    setSelectedServer(null)
+    setServers([])
+    setDisplayPage('servers')
+    setActivePage('servers')
+    setPhase('fading-in')
+    setTimeout(() => setPhase('idle'), 200)
   }, [])
 
   const handleSelectServer = useCallback((srv) => {
@@ -340,6 +355,7 @@ function AppContent() {
         panelType={panelType}
         server={isInServerPanel ? selectedServer : null}
         onLogout={isConnected ? handleDisconnect : null}
+        onAddAccount={isConnected ? handleAddAccount : null}
       />
       {renderContent()}
 
@@ -353,6 +369,8 @@ function AppContent() {
       )}
 
       <TooltipProvider />
+      <ConfirmHost />
+      <UpdateBridge />
     </div>
   )
 }

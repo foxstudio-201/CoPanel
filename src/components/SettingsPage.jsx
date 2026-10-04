@@ -1,10 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Globe, Palette, LinkSimple, PlugsConnected, ArrowClockwise, SignOut, Info, Cpu,
-  CheckCircle, Moon, Sun, ShieldCheck, Sparkle,
+  CheckCircle, Moon, Sun, ShieldCheck, Sparkle, DownloadSimple, Warning,
 } from '@phosphor-icons/react'
 import { useApp } from '../i18n/AppContext'
 import { getSession, setCpuThreads } from '../api/store.js'
+import {
+  getUpdateState, subscribeUpdate, checkForUpdates, downloadUpdate, installUpdate,
+  setAutoUpdate, openReleasesPage,
+} from '../lib/update'
 
 const ACCENT = '#a78bfa'
 
@@ -14,6 +18,10 @@ export default function SettingsPage({ theme, lang, session, panelType, servers,
   const [busy, setBusy] = useState(false)
   const [draftThreads, setDraftThreads] = useState(() => String(getSession().cpuThreads || 0))
   const [savedNote, setSavedNote] = useState('')
+  const [upd, setUpd] = useState(() => getUpdateState())
+  const [updBusy, setUpdBusy] = useState(false)
+
+  useEffect(() => subscribeUpdate(setUpd), [])
 
   const isLight = theme === 'light'
   const textColor = isLight ? '#111' : '#fff'
@@ -62,7 +70,78 @@ export default function SettingsPage({ theme, lang, session, panelType, servers,
     }
   }
 
+  const UPDATE_STATUS = {
+    idle: lang === 'vi' ? 'Chưa kiểm tra' : 'Not checked yet',
+    checking: lang === 'vi' ? 'Đang kiểm tra…' : 'Checking…',
+    'up-to-date': lang === 'vi' ? 'Bạn đang dùng bản mới nhất' : 'You are on the latest version',
+    available: lang === 'vi' ? `Có bản mới v${upd.latestVersion}` : `Update v${upd.latestVersion} available`,
+    downloading: lang === 'vi'
+      ? `Đang tải…${upd.progress?.percent != null ? ` ${upd.progress.percent}%` : ''}`
+      : `Downloading…${upd.progress?.percent != null ? ` ${upd.progress.percent}%` : ''}`,
+    ready: lang === 'vi' ? 'Đã tải xong — sẵn sàng cài đặt' : 'Downloaded — ready to install',
+    installing: lang === 'vi' ? 'Đang cài đặt…' : 'Installing…',
+    error: upd.error || (lang === 'vi' ? 'Kiểm tra thất bại' : 'Check failed'),
+  }
+  const updateStatusText = UPDATE_STATUS[upd.status] || UPDATE_STATUS.idle
+  const updateBusy = upd.status === 'checking' || upd.status === 'downloading' || upd.status === 'installing'
+  const canInstall = upd.canAutoInstall !== false
+  const hasDownload = upd.status === 'ready'
+  const canDownload = upd.status === 'available' && canInstall
+
+  const handleCheck = async () => {
+    if (updateBusy) return
+    setUpdBusy(true)
+    try { await checkForUpdates() } finally { setUpdBusy(false) }
+  }
+
+  const handleUpdateNow = async () => {
+    if (updateBusy) return
+    setUpdBusy(true)
+    try {
+      if (hasDownload) {
+        await installUpdate()
+        return
+      }
+      if (!canInstall) {
+        await openReleasesPage()
+        return
+      }
+      const res = await downloadUpdate()
+      if (res?.status === 'ready') await installUpdate()
+    } finally {
+      setUpdBusy(false)
+    }
+  }
+
+  const updateButtonLabel = () => {
+    if (upd.status === 'downloading') return lang === 'vi' ? 'Đang tải…' : 'Downloading…'
+    if (upd.status === 'installing') return lang === 'vi' ? 'Đang cài đặt…' : 'Installing…'
+    if (hasDownload) return lang === 'vi' ? 'Cài đặt ngay' : 'Install now'
+    if (canDownload) return lang === 'vi' ? 'Cập nhật ngay' : 'Update now'
+    if (upd.status === 'available' && !canInstall) return lang === 'vi' ? 'Mở trang tải' : 'Open download page'
+    return lang === 'vi' ? 'Kiểm tra cập nhật' : 'Check for updates'
+  }
+  const updateButtonAction = () => (canDownload || hasDownload || upd.status === 'available' ? handleUpdateNow() : handleCheck())
+  const showUpdateButton = upd.status === 'available' || canDownload || hasDownload || upd.status === 'downloading' || upd.status === 'installing'
+
   const cardStyle = { background: cardBg, border: `1px solid ${borderColor}` }
+
+  const switchToggle = (checked, onChange, ariaLabel) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={() => onChange(!checked)}
+      className="relative w-10 h-[22px] rounded-full shrink-0 cursor-pointer transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a78bfa]"
+      style={{ background: checked ? ACCENT : (isLight ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.2)') }}
+    >
+      <span
+        className="absolute top-[3px] w-4 h-4 rounded-full transition-all duration-200"
+        style={{ left: checked ? '22px' : '3px', background: isLight ? '#fff' : (checked ? '#0a0a0a' : '#fff') }}
+      />
+    </button>
+  )
 
   const LIGHT_TONE = {
     '#a78bfa': '#7c3aed',
@@ -308,6 +387,108 @@ export default function SettingsPage({ theme, lang, session, panelType, servers,
         </section>
 
         {}
+        <section className="rounded-2xl" style={cardStyle}>
+          {cardHeader(
+            ArrowClockwise,
+            tone('#3b82f6'),
+            lang === 'vi' ? 'Cập nhật' : 'Updates',
+            lang === 'vi' ? 'Kiểm tra bản mới từ GitHub và tự cài đặt.' : 'Check GitHub for new builds and install them.',
+          )}
+          <div className="px-4 pb-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold" style={{ color: textColor }}>
+                  {lang === 'vi' ? 'Phiên bản hiện tại' : 'Current version'}
+                </p>
+                <p className="text-[11px] font-mono mt-0.5" style={{ color: mutedColor }}>
+                  v{version || upd.currentVersion || '1.0.0'}
+                </p>
+              </div>
+              <span
+                className="text-[11px] font-medium text-right max-w-[60%] truncate"
+                style={{ color: upd.status === 'error' ? tone('#ef4444') : upd.status === 'available' ? tone('#3b82f6') : labelColor }}
+              >
+                {updateStatusText}
+              </span>
+            </div>
+
+            {upd.status === 'downloading' && (
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: softBg }}>
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: upd.progress?.percent != null ? `${upd.progress.percent}%` : '38%',
+                    background: ACCENT,
+                  }}
+                />
+              </div>
+            )}
+
+            <div className="flex items-start justify-between gap-3 pt-1" style={{ borderTop: `1px solid ${borderColor}` }}>
+              <div className="min-w-0 pt-2">
+                <p className="text-xs font-semibold" style={{ color: textColor }}>
+                  {lang === 'vi' ? 'Tự động cập nhật' : 'Automatic updates'}
+                </p>
+                <p className="text-[11px] mt-0.5 leading-snug" style={{ color: mutedColor }}>
+                  {lang === 'vi'
+                    ? 'Tự tải và cài đặt bản mới khi khởi động, không cần xác nhận.'
+                    : 'Download and install new builds on launch, without confirmation.'}
+                </p>
+              </div>
+              <div className="pt-1.5">
+                {switchToggle(upd.auto !== false, (v) => setAutoUpdate(v), lang === 'vi' ? 'Tự động cập nhật' : 'Automatic updates')}
+              </div>
+            </div>
+
+            {upd.status === 'available' && upd.canAutoInstall === false && (
+              <p className="text-[11px] leading-snug flex items-start gap-1.5" style={{ color: mutedColor }}>
+                <Warning size={13} weight="duotone" style={{ color: tone('#f59e0b'), marginTop: 1 }} />
+                {upd.portable
+                  ? (lang === 'vi'
+                    ? 'Bản portable không tự cài đặt được — sẽ mở trang tải để tải bản mới.'
+                    : 'The portable build cannot self-install — the download page will open instead.')
+                  : (lang === 'vi'
+                    ? 'Tự cài đặt hiện chỉ hỗ trợ Windows. Trên macOS/Linux sẽ mở trang tải.'
+                    : 'Automatic install is currently Windows-only. On macOS/Linux the download page will open.')}
+              </p>
+            )}
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={updateButtonAction}
+                disabled={updBusy || updateBusy}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-semibold transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a78bfa]"
+                style={{ background: ACCENT, color: '#0a0a0a' }}
+              >
+                {hasDownload ? <DownloadSimple size={13} weight="bold" /> : <ArrowClockwise size={13} weight="bold" />}
+                {updateButtonLabel()}
+              </button>
+              {showUpdateButton && upd.status !== 'downloading' && upd.status !== 'installing' && (
+                <button
+                  type="button"
+                  onClick={handleCheck}
+                  disabled={updBusy || updateBusy}
+                  className="px-3.5 py-2 rounded-xl text-[11px] font-semibold transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                  style={{ background: softBg, color: labelColor }}
+                >
+                  {lang === 'vi' ? 'Kiểm tra' : 'Check'}
+                </button>
+              )}
+              {(upd.status === 'available' || upd.status === 'error') && (
+                <button
+                  type="button"
+                  onClick={openReleasesPage}
+                  className="px-3 py-2 rounded-xl text-[11px] font-medium transition-all hover:opacity-80"
+                  style={{ color: mutedColor }}
+                >
+                  {lang === 'vi' ? 'Trang phát hành' : 'Releases'}
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+
         <section className="rounded-2xl" style={cardStyle}>
           {cardHeader(Info, tone('#22c55e'), lang === 'vi' ? 'Về ứng dụng' : 'About')}
           <div className="px-4 pb-4 flex flex-col gap-3">

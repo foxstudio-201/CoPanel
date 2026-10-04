@@ -4,6 +4,7 @@ const initial = {
   panelType: '', 
   url: '', 
   apiKey: '',
+  accountId: '',
   demo: false, 
   account: null, 
   error: '',

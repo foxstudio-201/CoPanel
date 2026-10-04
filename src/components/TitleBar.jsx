@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { User, Power, Globe, ShieldCheck, Pulse } from '@phosphor-icons/react'
+import { Power, Globe, ShieldCheck, Pulse } from '@phosphor-icons/react'
 import { useApp } from '../i18n/AppContext'
+import AccountSwitcher from './AccountSwitcher'
 
 function StatusDot({ color }) {
   return (
@@ -14,16 +15,13 @@ function StatusDot({ color }) {
 const PANEL_LABEL = { pterodactyl: 'Pterodactyl', calagopus: 'Calagopus' }
 
 
-export default function TitleBar({ onCloseRequest, user, onLogout, lang, theme, server, panelType, session }) {
+export default function TitleBar({ onCloseRequest, user, onLogout, onAddAccount, lang, theme, server, panelType, session }) {
   const isDark = theme !== 'light'
   const textColor = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'
   const textHover = isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)'
   const hoverBg = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
   const hoverBgRed = isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)'
   const closeHoverBg = 'rgba(239,68,68,0.8)'
-  const userBg = isDark ? 'rgba(167,139,250,0.15)' : 'rgba(139,92,246,0.12)'
-  const userColor = isDark ? '#a78bfa' : '#7c3aed'
-  const usernameColor = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'
   const statBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'
   const statBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'
 
@@ -76,19 +74,12 @@ export default function TitleBar({ onCloseRequest, user, onLogout, lang, theme, 
     <div className="drag-region flex items-center justify-between h-11 px-4 fixed top-0 left-0 right-0" style={{ zIndex: 9999 }}>
       <div className="flex items-center gap-3 no-drag" style={{ marginLeft: '72px' }}>
         {account && (
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: userBg }}>
-              <User size={18} weight="duotone" style={{ color: userColor }} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-semibold leading-tight" style={{ color: usernameColor }}>
-                {lang === 'vi' ? 'Đã kết nối' : 'Connected as'}
-              </span>
-              <span className="text-[13px] font-bold leading-tight" style={{ color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.85)' }}>
-                {account.username || account.email || ''}
-              </span>
-            </div>
-          </div>
+          <AccountSwitcher
+            session={session}
+            lang={lang}
+            theme={theme}
+            onAddAccount={onAddAccount}
+          />
         )}
       </div>
 

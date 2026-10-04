@@ -101,7 +101,15 @@ export default function TooltipProvider() {
   else pos = { left: r.right + GAP, top: centerY, transform: 'translate(0, -50%)' }
 
   const ARROW = 'rgba(26,22,37,0.92)'
-  const triBase = { position: 'absolute', width: 0, height: 0, border: '5px solid transparent' }
+  const triBase = {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    borderTop: '5px solid transparent',
+    borderRight: '5px solid transparent',
+    borderBottom: '5px solid transparent',
+    borderLeft: '5px solid transparent',
+  }
   const arrowEl =
     dir === 'top' ? <span style={{ ...triBase, borderTop: `6px solid ${ARROW}`, left: '50%', bottom: '-6px', transform: 'translateX(-50%)' }} />
     : dir === 'bottom' ? <span style={{ ...triBase, borderBottom: `6px solid ${ARROW}`, left: '50%', top: '-6px', transform: 'translateX(-50%)' }} />

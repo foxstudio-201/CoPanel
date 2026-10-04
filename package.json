@@ -87,6 +87,44 @@
       "requestedExecutionLevel": "asInvoker",
       "forceCodeSigning": false
     },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Utility",
+      "icon": "public/icon.png",
+      "maintainer": "CoPanel <contact@copanel.local>"
+    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,

@@ -5,6 +5,7 @@ import {
 } from '@phosphor-icons/react'
 import * as api from '../../api/client.js'
 import { showToast } from '../../lib/toast'
+import { openConsole, closeConsole } from '../../api/session'
 
 function formatBytes(n) {
   if (!n || n <= 0) return '0 B'
@@ -148,6 +149,7 @@ export default function BackupPage({ server, theme, lang, onServerUpdate }) {
   const [deleting, setDeleting] = useState(false)
 
   const serverId = server?.id || server?.uuid
+  const backupLimit = Number(server?.featureLimits?.backups) || 0
 
   const load = async () => {
     if (!serverId) return
@@ -170,6 +172,76 @@ export default function BackupPage({ server, theme, lang, onServerUpdate }) {
     const t = setInterval(() => { load() }, 4000)
     return () => clearInterval(t)
   }, [hasRunning, serverId])
+
+  useEffect(() => {
+    if (!serverId) return undefined
+    let cancelled = false
+    const onEvent = ({ event, args }) => {
+      if (cancelled) return
+      const list = Array.isArray(args) ? args : []
+      const jsonArg = (i) => {
+        try { return JSON.parse(list[i] || 'null') } catch { return null }
+      }
+
+      if (typeof event === 'string' && event.startsWith('backup completed:')) {
+        load()
+        return
+      }
+      if (event === 'backup progress' || event === 'backup restore progress') {
+        const uuid = list[0]
+        const p = jsonArg(1)
+        if (uuid && p) {
+          const bytes = Number(p.bytes_processed) || 0
+          const total = Number(p.bytes_total) || 0
+          const files = Number(p.files_processed) || 0
+          setProgressMap((m) => ({ ...m, [uuid]: { bytes, total, files } }))
+          if (event === 'backup restore progress') {
+            setRestoreProgress((prev) => ({
+              file: prev?.file || '',
+              pct: total > 0 ? Math.min(100, Math.round((bytes / total) * 100)) : null,
+            }))
+          }
+        }
+        return
+      }
+      if (event === 'backup started') {
+        load()
+        return
+      }
+      if (event === 'backup completed' || event === 'backup deleted') {
+        const uuid = list[0]
+        if (uuid) {
+          setProgressMap((m) => {
+            const next = { ...m }
+            delete next[uuid]
+            return next
+          })
+        }
+        load()
+        return
+      }
+      if (event === 'backup restore started') {
+        setRestoreProgress({ file: '', pct: null })
+        return
+      }
+      if (event === 'backup restore completed') {
+        setRestoreProgress(null)
+        setProgressMap({})
+        load()
+        return
+      }
+      if (event === 'daemon message') {
+        const text = list.filter((x) => typeof x === 'string').join(' ')
+        const m = text.match(/\(restoring\):\s*(.+)/i)
+        if (m) setRestoreProgress((prev) => ({ file: m[1].trim(), pct: prev?.pct ?? null }))
+      }
+    }
+    openConsole(serverId, onEvent).catch(() => {})
+    return () => {
+      cancelled = true
+      closeConsole(serverId).catch(() => {})
+    }
+  }, [serverId])
 
   const closeMenu = () => {
     setMenuId(null)
@@ -277,6 +349,7 @@ export default function BackupPage({ server, theme, lang, onServerUpdate }) {
     try {
       await api.restoreBackup(serverId, restoreTarget.uuid, { truncate: restoreOpts.truncateDirectory })
       setRestoreTarget(null)
+      setRestoreProgress({ file: '', pct: null })
       await load()
     } catch (err) {
       const msg = err?.message || (lang === 'vi' ? 'Khôi phục backup thất bại' : 'Restore backup failed')
@@ -346,7 +419,8 @@ export default function BackupPage({ server, theme, lang, onServerUpdate }) {
           {lang === 'vi' ? 'Sao lưu' : 'Backups'}
         </h2>
         <span className="text-[10px]" style={{ color: labelColor }}>
-          {backupCount || backups.length} · {lang === 'vi' ? 'tối đa dùng chung' : 'shared limit'}
+          {backupCount || backups.length}
+          {backupLimit > 0 ? `/${backupLimit}` : ''} · {lang === 'vi' ? 'bản sao lưu' : 'backups'}
         </span>
         <div className="flex-1" />
         <input
@@ -376,8 +450,16 @@ export default function BackupPage({ server, theme, lang, onServerUpdate }) {
       )}
 
       {restoreProgress && (
-        <div className="px-3 py-2 rounded-lg text-[10px]" style={{ background: '#f59e0b15', border: '1px solid #f59e0b30', color: '#f59e0b' }}>
-          {lang === 'vi' ? 'Đang khôi phục backup…' : 'Restoring backup…'}
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px]" style={{ background: '#f59e0b15', border: '1px solid #f59e0b30', color: '#f59e0b' }}>
+          <ArrowClockwise size={12} className="animate-spin shrink-0" />
+          <span className="flex-1 min-w-0 truncate">
+            {lang === 'vi' ? 'Đang khôi phục backup…' : 'Restoring backup…'}
+            {restoreProgress.pct != null ? ` · ${restoreProgress.pct}%` : ''}
+            {restoreProgress.file ? ` · ${restoreProgress.file}` : ''}
+          </span>
+          <button onClick={() => setRestoreProgress(null)} className="shrink-0 hover:opacity-70">
+            <X size={12} weight="bold" />
+          </button>
         </div>
       )}
 
@@ -425,12 +507,12 @@ export default function BackupPage({ server, theme, lang, onServerUpdate }) {
             {filtered.map((b) => {
               const isBusy = busyId === b.uuid
               const prog = progressMap[b.uuid]
+              const pct = prog && prog.total > 0
+                ? Math.min(100, Math.round((prog.bytes / prog.total) * 100))
+                : null
               const isRunning = !b.completed_at
               const isFailed = !!b.completed_at && !b.is_successful
               const isDeleting = b.deletionStatus === 'deleting'
-              const pct = prog && prog.total > 0
-                ? Math.min(100, Math.round((prog.bytes / prog.total) * 100))
-                : (prog ? null : null)
 
               return (
                 <div
@@ -466,13 +548,7 @@ export default function BackupPage({ server, theme, lang, onServerUpdate }) {
                     {shortChecksum(b.checksum)}
                   </span>
                   <span style={{ color: labelColor }}>
-                    {isRunning && prog ? (
-                      <span style={{ color: '#a78bfa' }}>
-                        {pct === null ? '…' : `${pct}%`}
-                      </span>
-                    ) : (
-                      formatBytes(b.bytes)
-                    )}
+                    {isRunning ? (pct == null ? '…' : `${pct}%`) : formatBytes(b.bytes)}
                   </span>
                   <span style={{ color: labelColor }}>{b.files || 0}</span>
                   <span style={{ color: labelColor }}>{formatTime(b.created_at)}</span>
@@ -539,26 +615,19 @@ export default function BackupPage({ server, theme, lang, onServerUpdate }) {
                   {isRunning && (
                     <div className="col-span-7 -mt-1">
                       <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(139,92,246,0.15)' }}>
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: prog && prog.total > 0
-                              ? `${Math.min(100, (prog.bytes / prog.total) * 100)}%`
-                              : '40%',
-                            background: '#8b5cf6',
-                            opacity: prog && prog.total > 0 ? 1 : 0.5,
-                          }}
-                        />
+                        {pct === null ? (
+                          <div className="h-full rounded-full indeterminate-bar" style={{ width: '38%', background: '#8b5cf6' }} />
+                        ) : (
+                          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: '#8b5cf6' }} />
+                        )}
                       </div>
                       <div className="flex justify-between mt-0.5 text-[9px]" style={{ color: '#a78bfa' }}>
                         <span>
-                          {prog
-                            ? `${formatBytes(prog.bytes)} / ${formatBytes(prog.total)} · ${prog.files || 0} files`
-                            : (lang === 'vi' ? 'Đang đóng gói…' : 'Packing…')}
+                          {pct === null
+                            ? (lang === 'vi' ? 'Đang đóng gói…' : 'Packing…')
+                            : `${formatBytes(prog.bytes)} / ${formatBytes(prog.total)} · ${prog.files} files`}
                         </span>
-                        {prog && prog.total > 0 && (
-                          <span>{Math.min(100, Math.round((prog.bytes / prog.total) * 100))}%</span>
-                        )}
+                        {pct !== null && <span>{pct}%</span>}
                       </div>
                     </div>
                   )}

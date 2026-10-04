@@ -6,6 +6,7 @@ import {
 } from '@phosphor-icons/react'
 import * as api from '../../api/client.js'
 import { showToast } from '../../lib/toast'
+import { requestConfirm } from '../../lib/confirm'
 
 const EDITOR_BG = '#1e1e1e'
 const GUTTER_BG = '#1e1e1e'
@@ -454,8 +455,18 @@ export default function FileManagerPage({ server, theme, lang }) {
     setSaving(false)
   }
 
-  const handleCloseEditor = () => {
-    if (dirty && !window.confirm(lang === 'vi' ? 'File chưa lưu. Đóng?' : 'Unsaved changes. Close?')) return
+  const handleCloseEditor = async () => {
+    if (dirty) {
+      const vi = lang === 'vi'
+      const ok = await requestConfirm({
+        title: vi ? 'Đóng file?' : 'Close file?',
+        message: vi ? 'File có thay đổi chưa lưu. Đóng mà không lưu?' : 'This file has unsaved changes. Close anyway?',
+        confirmLabel: vi ? 'Đóng' : 'Close',
+        cancelLabel: vi ? 'Ở lại' : 'Stay',
+        tone: 'warning',
+      })
+      if (!ok) return
+    }
     setEditingFile(null)
     setSaveMsg('')
     setOpenErr('')
@@ -483,7 +494,15 @@ export default function FileManagerPage({ server, theme, lang }) {
 
   const handleDelete = async (f) => {
     if (!server?.id) return
-    if (!window.confirm(lang === 'vi' ? `Xóa ${f.name}?` : `Delete ${f.name}?`)) return
+    const vi = lang === 'vi'
+    const ok = await requestConfirm({
+      title: vi ? 'Xoá tệp' : 'Delete file',
+      message: vi ? `Xoá "${f.name}"? Hành động này không thể hoàn tác.` : `Delete "${f.name}"? This cannot be undone.`,
+      confirmLabel: vi ? 'Xoá' : 'Delete',
+      cancelLabel: vi ? 'Huỷ' : 'Cancel',
+      tone: 'danger',
+    })
+    if (!ok) return
     try {
       await api.deleteFiles(server.id, currentPath, [f.name])
       setSelected(null)

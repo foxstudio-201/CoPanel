@@ -4,6 +4,7 @@ const path = require('path')
 const fs = require('fs')
 const { originOf, describeWsError, probeWsUpgrade, wsFailureMessage } = require('./ws-diag.cjs')
 const { mcStatusPing } = require('./slp.cjs')
+const updater = require('./updater.cjs')
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -390,6 +391,12 @@ function registerIpc() {
   ipcMain.handle('win:minimize', () => { mainWindow?.minimize(); return { ok: true } })
   ipcMain.handle('win:close', () => { mainWindow?.close(); return { ok: true } })
   ipcMain.handle('win:quit', () => { app.quit(); return { ok: true } })
+
+  ipcMain.handle('update:get', () => updater.getState())
+  ipcMain.handle('update:check', () => updater.check())
+  ipcMain.handle('update:download', () => updater.download())
+  ipcMain.handle('update:install', () => updater.install())
+  ipcMain.handle('update:set-auto', (_e, value) => updater.setAuto(value))
 }
 
 function createWindow() {
@@ -442,6 +449,10 @@ function createWindow() {
     return { action: 'deny' }
   })
 
+  mainWindow.webContents.once('did-finish-load', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('copanel:update', updater.getState())
+  })
+
   mainWindow.on('closed', () => {
     for (const id of [...sockets.keys()]) wsDisconnect({ id })
     mainWindow = null
@@ -451,6 +462,14 @@ function createWindow() {
 app.whenReady().then(() => {
   registerIpc()
   createWindow()
+
+  updater.init({
+    send: (state) => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('copanel:update', state)
+    },
+    readSettings,
+    writeSettings,
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

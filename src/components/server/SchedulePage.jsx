@@ -5,6 +5,7 @@ import {
 } from '@phosphor-icons/react'
 import * as api from '../../api/client.js'
 import { showToast } from '../../lib/toast'
+import { requestConfirm } from '../../lib/confirm'
 
 const PRESETS = [
   { label: '*/5 * * * *', vi: 'Mỗi 5 phút', en: 'Every 5 minutes' },
@@ -487,7 +488,14 @@ export default function SchedulePage({ server, theme, lang, onServerUpdate }) {
   }
 
   const handleDelete = async (s) => {
-    const ok = window.confirm(lang === 'vi' ? `Xóa lịch trình "${s.name}"?` : `Delete schedule "${s.name}"?`)
+    const vi = lang === 'vi'
+    const ok = await requestConfirm({
+      title: vi ? 'Xoá lịch trình' : 'Delete schedule',
+      message: vi ? `Xoá lịch trình "${s.name}"? Hành động này không thể hoàn tác.` : `Delete schedule "${s.name}"? This cannot be undone.`,
+      confirmLabel: vi ? 'Xoá' : 'Delete',
+      cancelLabel: vi ? 'Huỷ' : 'Cancel',
+      tone: 'danger',
+    })
     if (!ok) return
     setBusyId(s.id)
     try {
