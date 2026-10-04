@@ -197,7 +197,7 @@ async function download() {
   }
 }
 
-function launchInstaller() {
+function launchInstaller(relaunchTarget) {
   const script = [
     'param([int]$appPid, [string]$setup, [string]$exe)',
     'while (Get-Process -Id $appPid -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 400 }',
@@ -211,7 +211,7 @@ function launchInstaller() {
 
   const child = spawn(
     'powershell.exe',
-    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, String(process.pid), setupPath, process.execPath],
+    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, String(process.pid), setupPath, relaunchTarget],
     { detached: true, stdio: 'ignore', windowsHide: true },
   )
   child.unref()
@@ -223,12 +223,16 @@ function install() {
   if (process.platform !== 'win32') {
     return patch({ status: 'error', error: 'Nền tảng này chưa hỗ trợ tự cài đặt.' })
   }
+  const relaunchTarget = process.execPath
+  if (!/^copanel(\.exe)?$/i.test(path.basename(relaunchTarget))) {
+    return patch({ status: 'error', error: 'Không xác định được ứng dụng CoPanel đang chạy.' })
+  }
   if (!setupPath || !fs.existsSync(setupPath)) {
     return patch({ status: 'error', error: 'Chưa có bản cập nhật nào được tải.' })
   }
   patch({ status: 'installing', error: '' })
   try {
-    launchInstaller()
+    launchInstaller(relaunchTarget)
   } catch (err) {
     return patch({ status: 'error', error: err?.message || 'Không chạy được bộ cài.' })
   }
