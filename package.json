@@ -106,9 +106,6 @@
       ],
       "category": "public.app-category.utilities"
     },
-    "dmg": {
-      "license": "license_vi.txt"
-    },
     "linux": {
       "target": [
         {
@@ -137,7 +134,7 @@
       "createStartMenuShortcut": true,
       "shortcutName": "CoPanel",
       "include": "installer.nsh",
-      "license": "license_vi.txt"
+      "license": "license-vi.txt"
     },
     "publish": null
   }
