@@ -45,10 +45,11 @@ jobs:
           name: ${{ matrix.platform }}-artifacts
           if-no-files-found: error
           path: |
-            dist-electron/**
-            !dist-electron/**/*.blockmap
-            !dist-electron/builder-debug.yml
-            !dist-electron/builder-effective-config.yaml
+            dist-electron/*.exe
+            dist-electron/*.dmg
+            dist-electron/*.zip
+            dist-electron/*.AppImage
+            dist-electron/*.deb
 
   release:
     name: Publish release
@@ -69,4 +70,4 @@ jobs:
           files: artifacts/**
           generate_release_notes: true
           draft: false
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true
