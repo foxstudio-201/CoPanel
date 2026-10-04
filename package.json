@@ -106,6 +106,9 @@
       ],
       "category": "public.app-category.utilities"
     },
+    "dmg": {
+      "license": "license_vi.txt"
+    },
     "linux": {
       "target": [
         {
